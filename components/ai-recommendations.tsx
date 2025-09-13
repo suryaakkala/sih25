@@ -142,10 +142,8 @@ export default function AIRecommendations() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-6">
-            <Brain className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">No new recommendations at this time.</p>
-            <p className="text-sm text-gray-400 mt-1">Keep up the great work!</p>
+          <div className="space-y-4">
+            {/* No recommendations to show */}
           </div>
         </CardContent>
       </Card>
@@ -159,52 +157,80 @@ export default function AIRecommendations() {
           <Brain className="h-5 w-5 text-blue-600" />
           AI Recommendations
         </CardTitle>
-        <CardDescription>Personalized suggestions to improve your academic performance</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {visibleRecommendations.slice(0, 3).map((recommendation) => (
-            <Alert key={recommendation.id} className="relative">
-              <div className="flex items-start gap-3">
-                {getRecommendationIcon(recommendation.type)}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-sm text-gray-900">{recommendation.title}</h4>
-                    <Badge variant="outline" className={`text-xs ${getPriorityColor(recommendation.priority)}`}>
+            <Alert
+              key={recommendation.id}
+              className="relative w-full border rounded-lg p-4"
+            >
+              {/* Dismiss button (absolute, floating on card) */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  handleRecommendationAction(recommendation.id, "dismissed")
+                }
+                className="absolute top-2 right-2 h-6 w-6 p-0"
+                aria-label="Dismiss"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+
+              <div className="grid grid-cols-[auto,1fr] gap-5 w-full items-start">
+                {/* Icon on the left */}
+                <div className="pt-1 flex items-start">
+                  {getRecommendationIcon(recommendation.type)}
+                </div>
+
+                {/* Main content */}
+                <div className="flex flex-col w-full">
+                  {/* Title + badge row */}
+                  <div className="flex items-center justify-between mb-1 w-full">
+                    <h4 className="font-semibold text-base text-gray-900 break-words">
+                      {recommendation.title}
+                    </h4>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs flex items-center gap-1 ${getPriorityColor(
+                        recommendation.priority,
+                      )}`}
+                    >
                       {getPriorityIcon(recommendation.priority)}
-                      <span className="ml-1">{recommendation.priority}</span>
+                      <span>{recommendation.priority}</span>
                     </Badge>
                   </div>
-                  <AlertDescription className="text-sm text-gray-600 mb-2">
-                    {recommendation.description}
-                  </AlertDescription>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+
+                  {/* Description and bottom row side by side on desktop */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 w-full">
+                    <AlertDescription className="text-sm text-gray-600 mb-2 break-words md:mb-0 md:max-w-[60%]">
+                      {recommendation.description}
+                    </AlertDescription>
+
+                    {/* Bottom row (category, impact, action button) */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">
                         {recommendation.category}
                       </Badge>
-                      <span className="text-xs text-gray-500">{recommendation.estimated_impact}</span>
+                      <span className="text-xs text-gray-500">
+                        {recommendation.estimated_impact}
+                      </span>
+                      {recommendation.actionable && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleRecommendationAction(recommendation.id, "acted_upon")
+                          }
+                          className="text-xs"
+                        >
+                          Take Action
+                        </Button>
+                      )}
                     </div>
-                    {recommendation.actionable && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRecommendationAction(recommendation.id, "acted_upon")}
-                        className="text-xs"
-                      >
-                        Take Action
-                      </Button>
-                    )}
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRecommendationAction(recommendation.id, "dismissed")}
-                  className="absolute top-2 right-2 h-6 w-6 p-0"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
               </div>
             </Alert>
           ))}

@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { generatePersonalizedRecommendations, trackRecommendationInteraction } from "@/components/ai-recommendations"
+import { generatePersonalizedRecommendations, trackRecommendationInteraction } from "@/lib/ai-recommendations"
 
 export async function GET(request: NextRequest) {
   try {
