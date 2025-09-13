@@ -1,3 +1,5 @@
+// FILE: lib/auth.ts
+
 import { createClient } from "@/lib/supabase/server"
 import type { Profile, UserRole } from "@/lib/types"
 import { redirect } from "next/navigation"
@@ -5,65 +7,31 @@ import { redirect } from "next/navigation"
 export async function getCurrentUser(): Promise<Profile | null> {
   const supabase = await createClient()
 
+  // First, get the session and the authenticated user
   const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession()
-
-  const user = session?.user
+    data: { user },
+  } = await supabase.auth.getUser()
 
   console.log("[v0] getCurrentUser - user:", user ? "found" : "not found")
-  if (error) {
-    console.log("[v0] getCurrentUser - auth error:", error.message)
+
+  if (!user) {
+    return null
   }
 
-  if (error || !user) return null
+  // Next, fetch the user's profile from the 'profiles' table.
+  // The trigger in your SQL ensures this profile will exist for new users.
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single()
 
-  let profile = null
-  let retries = 3
-
-  while (retries > 0 && !profile) {
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single()
-
-    if (profileData) {
-      profile = profileData
-      console.log("[v0] Profile found:", profile.email, profile.role)
-      break
-    }
-
-    if (profileError && profileError.code !== "PGRST116") {
-      console.error("[v0] Profile fetch error:", profileError)
-      break
-    }
-
-    // If profile doesn't exist, try to create it manually
-    if (retries === 3) {
-      console.log("[v0] Creating profile for user:", user.id)
-      const { error: insertError } = await supabase.from("profiles").insert({
-        id: user.id,
-        email: user.email || "",
-        full_name: user.user_metadata?.full_name || "New User",
-        role: (user.user_metadata?.role as UserRole) || "student",
-        student_id: user.user_metadata?.student_id || null,
-        department: user.user_metadata?.department || null,
-        year_level: user.user_metadata?.year_level || null,
-      })
-
-      if (insertError) {
-        console.error("[v0] Profile creation error:", insertError)
-      }
-    }
-
-    retries--
-    if (retries > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    }
+  if (profileError) {
+    console.error("[v0] Profile fetch error:", profileError.message)
+    return null
   }
 
+  console.log("[v0] Profile found:", profile.email, profile.role)
   return profile
 }
 

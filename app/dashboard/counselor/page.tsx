@@ -381,12 +381,12 @@ export default async function CounselorDashboard() {
                         {} as Record<string, number>,
                       ),
                     )
-                      .sort(([, a], [, b]) => b - a)
+                      .sort(([, a], [, b]) => (b as number) - (a as number))
                       .slice(0, 5)
                       .map(([department, count]) => (
                         <div key={department} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                           <span className="text-sm text-gray-700">{department}</span>
-                          <Badge variant="outline">{count} students</Badge>
+                          <Badge variant="outline">{String(count)} students</Badge>
                         </div>
                       ))}
                   </div>

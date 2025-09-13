@@ -65,9 +65,13 @@ export default async function AdminDashboard() {
     .select("attendance_rate, task_completion_rate")
 
   const avgAttendanceRate =
-    systemAnalytics?.reduce((sum, a) => sum + a.attendance_rate, 0) / (systemAnalytics?.length || 1) || 0
+    systemAnalytics && systemAnalytics.length > 0
+      ? systemAnalytics.reduce((sum, a) => sum + a.attendance_rate, 0) / systemAnalytics.length
+      : 0
   const avgTaskCompletion =
-    systemAnalytics?.reduce((sum, a) => sum + a.task_completion_rate, 0) / (systemAnalytics?.length || 1) || 0
+    systemAnalytics && systemAnalytics.length > 0
+      ? systemAnalytics.reduce((sum, a) => sum + a.task_completion_rate, 0) / systemAnalytics.length
+      : 0
 
   // Get recent user registrations
   const { data: recentUsers } = await supabase

@@ -116,7 +116,12 @@ async function fetchStudentData(supabase: any, userId: string): Promise<StudentD
 
     // Calculate attendance rate
     const totalClasses = attendance?.length || 0
-    const presentCount = attendance?.filter((a) => a.status === "present").length || 0
+    interface AttendanceRecord {
+      status: string;
+      check_in_time: string;
+      [key: string]: any;
+    }
+    const presentCount = (attendance as AttendanceRecord[] | undefined)?.filter((a) => a.status === "present").length || 0
     const attendance_rate = totalClasses > 0 ? Math.round((presentCount / totalClasses) * 100) : 100
 
     // Fetch tasks
@@ -280,7 +285,15 @@ export async function trackRecommendationInteraction(
 }
 
 export function generateSmartNotifications(studentData: StudentData): any[] {
-  const notifications = []
+  interface Notification {
+    type: "class_reminder" | "task_deadline";
+    title: string;
+    message: string;
+    priority: "high" | "medium" | "low";
+    action_url: string;
+  }
+
+  const notifications: Notification[] = [];
 
   // Upcoming class notifications
   const now = new Date()

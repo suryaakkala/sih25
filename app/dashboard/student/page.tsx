@@ -48,10 +48,89 @@ export default async function StudentDashboard() {
       classes:class_id (name, code)
     `)
     .eq("assigned_to", profile.id)
-    .in(["pending", "in_progress"], ["status"])
+    .in("status", ["pending", "in_progress"])
     .order("due_date", { ascending: true })
     .limit(5)
+    interface Profile {
+      id: string
+      full_name: string
+      student_id?: string
+      department: string
+      [key: string]: any
+    }
 
+    interface Teacher {
+      full_name: string
+      [key: string]: any
+    }
+
+    interface Class {
+      id: string
+      name: string
+      code: string
+      teacher?: Teacher
+      [key: string]: any
+    }
+
+    interface Enrollment {
+      id: string
+      class_id: string
+      classes?: Class
+      [key: string]: any
+    }
+
+    interface Schedule {
+      id: string
+      class_id: string
+      day_of_week: number
+      start_time: string
+      end_time: string
+      room?: string
+      classes?: Class
+      [key: string]: any
+    }
+
+    interface Task {
+      id: string
+      title: string
+      assigned_to: string
+      status: string
+      priority: string
+      ai_generated?: boolean
+      due_date?: string
+      classes?: {
+        name: string
+        code: string
+      }
+      [key: string]: any
+    }
+
+    interface Analytics {
+      id: string
+      class_id: string
+      attendance_rate: number
+      present_sessions: number
+      late_sessions: number
+      total_sessions: number
+      classes?: {
+        name: string
+        code: string
+      }
+      [key: string]: any
+    }
+
+    interface Notification {
+      id: string
+      user_id: string
+      title: string
+      message: string
+      created_at: string
+      is_read: boolean
+      [key: string]: any
+    }
+
+    // Add types to fetched data
+    // (Remove duplicate declarations and type annotations)
   // Get attendance analytics
   const { data: analytics } = await supabase
     .from("student_analytics")
@@ -71,7 +150,7 @@ export default async function StudentDashboard() {
     .limit(3)
 
   const overallAttendanceRate =
-    analytics?.reduce((sum, a) => sum + a.attendance_rate, 0) / (analytics?.length || 1) || 0
+    analytics?.reduce((sum: any, a: { attendance_rate: any }) => sum + a.attendance_rate, 0) / (analytics?.length || 1) || 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
