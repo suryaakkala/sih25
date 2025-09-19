@@ -2,8 +2,7 @@
 
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { groqApi } from "./groq-api" // Import the Groq API client
-
+import { groqApi } from "./groq-api"
 
 interface StudentData {
   id: string;
@@ -55,10 +54,7 @@ async function fetchStudentData(supabase: any, userId: string): Promise<StudentD
     // Fetch schedule
     const { data: schedule } = await supabase
       .from("schedules")
-      .select(`
-        *,
-        classes(name, location)
-      `)
+      .select(`*, classes(name, location)`)
       .eq("student_id", userId)
 
     return {
@@ -67,7 +63,7 @@ async function fetchStudentData(supabase: any, userId: string): Promise<StudentD
       recent_attendance: attendance?.slice(0, 10) || [],
       tasks: tasks || [],
       schedule: schedule || [],
-      performance_metrics: null, // Would be calculated from grades/assessments
+      performance_metrics: null,
     }
   } catch (error) {
     console.error("Error fetching student data:", error)
@@ -90,83 +86,105 @@ export async function generatePersonalizedRecommendations(userId: string): Promi
   if (!studentData) {
     return getDefaultRecommendations()
   }
+
   try {
     // Try to use Groq API for advanced AI recommendations
     console.log("Student data sent to Groq API:", studentData);
     const groqRecommendations = await groqApi.generateRecommendations({
       studentData,
-      recommendationType: 'diverse', // Request diverse recommendations
-      count: 10, // Increase the number of recommendations requested
+      recommendationType: 'diverse',
+      count: 4, // Generate 2-4 recommendations
       includeDetails: true,
       prompt: {
-        title: 'Generate actionable and diverse study recommendations',
-        description: 'Provide a variety of personalized tips, strategies, and actionable insights to help students improve their academic performance and overall learning experience. Give very minimal response and no markdown formatting. Always genarete randomly from the following categories: study_tip, schedule_optimization, attendance_improvement, task_prioritization. Ensure recommendations are specific, practical, and tailored to individual student needs. Avoid generic advice and focus on actionable steps that can lead to measurable improvements. Consider factors such as attendance patterns, task management, and study habits. If applicable, suggest ways to optimize their schedule based on their busiest days: ' + (studentData.schedule ? analyzeBusyDays(studentData.schedule).join(", ") : "No schedule data available") + '. Provide a mix of high, medium, and low priority recommendations with clear estimated impacts.'
+        title: 'Generate personalized study recommendations',
+        description: 'Create 2-4 specific, actionable recommendations based on the student data. Include clear titles and detailed descriptions.'
       }
     });
-    console.log("Groq API response:", groqRecommendations);
+    
+    console.log("Groq API recommendations:", groqRecommendations);
+    
     // If Groq API returned valid recommendations, use them
     if (groqRecommendations && groqRecommendations.length > 0) {
       console.log("Using Groq AI recommendations");
-      return groqRecommendations.map((rec: any) => ({
-        ...rec,
-        type: rec.type as Recommendation["type"],
-        priority: rec.priority as Recommendation["priority"],
-      }));
+      return groqRecommendations.slice(0, 4); // Ensure we return at most 4 recommendations
     }
-    // Fall back to the existing recommendation system if Groq fails
+    
+    // Fall back to the default recommendation system if Groq fails
     console.log("Falling back to default recommendation system");
     return generateDefaultRecommendations(studentData);
   } catch (error) {
     console.error("Error using Groq API for recommendations:", error);
-    // Fall back to the existing recommendation system
+    // Fall back to the default recommendation system
     return generateDefaultRecommendations(studentData);
   }
 
-  // Wrapper around the original recommendation generation logic for fallback
   function generateDefaultRecommendations(studentData: StudentData): Recommendation[] {
     const recommendations: Recommendation[] = [];
 
-    // Example recommendation: Improve attendance
+    // Recommendation 1: Improve attendance
     if (studentData.attendance_rate < 75) {
       recommendations.push({
         id: "1",
         type: "attendance_improvement",
-        title: "Improve Attendance",
-        description: "Your attendance rate is below 75%. Consider attending more classes to improve your performance.",
+        title: "Improve Your Attendance Rate",
+        description: "Your attendance rate is below 75%. Consider attending more classes to improve your performance and understanding of the material.",
         priority: "high",
-        actionable: true,
-        estimated_impact: "High - Regular attendance improves understanding and grades.",
+        actionable: false,
+        estimated_impact: "High impact on overall performance",
         category: "Attendance",
       });
     }
 
-    // Example recommendation: Task prioritization
+    // Recommendation 2: Task prioritization
     if (studentData.tasks.length > 0) {
-      recommendations.push({
-        id: "2",
-        type: "task_prioritization",
-        title: "Prioritize Tasks",
-        description: "You have pending tasks. Focus on completing them before the due dates.",
-        priority: "medium",
-        actionable: true,
-        estimated_impact: "Medium - Timely task completion reduces stress.",
-        category: "Tasks",
-      });
+      const pendingTasks = studentData.tasks.filter((task: any) => 
+        task.status !== "completed" && task.status !== "archived"
+      ).length;
+      
+      if (pendingTasks > 0) {
+        recommendations.push({
+          id: "2",
+          type: "task_prioritization",
+          title: "Prioritize Your Pending Tasks",
+          description: `You have ${pendingTasks} pending tasks. Focus on completing them based on due dates to avoid last-minute stress.`,
+          priority: "medium",
+          actionable: false,
+          estimated_impact: "Medium impact on stress reduction",
+          category: "Task Management",
+        });
+      }
     }
 
-    // Example recommendation: Study tips
+    // Recommendation 3: Study tips
     recommendations.push({
       id: "3",
       type: "study_tip",
-      title: "Effective Study Techniques",
-      description: "Consider using flashcards and group study sessions to enhance learning.",
-      priority: "low",
+      title: "Implement Active Recall Techniques",
+      description: "Research shows that active recall (self-testing) is more effective than passive review. Try summarizing what you've learned without looking at your notes.",
+      priority: "medium",
       actionable: false,
-      estimated_impact: "Low - Incremental improvements in study habits.",
-      category: "Study",
+      estimated_impact: "High impact on long-term retention",
+      category: "Study Methods",
     });
 
-    return recommendations;
+    // Recommendation 4: Schedule optimization
+    if (studentData.schedule && studentData.schedule.length > 0) {
+      const busyDays = analyzeBusyDays(studentData.schedule);
+      if (busyDays.length > 0) {
+        recommendations.push({
+          id: "4",
+          type: "schedule_optimization",
+          title: "Balance Your Study Schedule",
+          description: `Your busiest days are ${busyDays.join(", ")}. Consider spreading out your study sessions to avoid burnout on these days.`,
+          priority: "medium",
+          actionable: false,
+          estimated_impact: "Medium impact on workload management",
+          category: "Schedule Planning",
+        });
+      }
+    }
+
+    return recommendations.slice(0, 4); // Return at most 4 recommendations
   }
 
   function getDefaultRecommendations(): Recommendation[] {
@@ -174,55 +192,50 @@ export async function generatePersonalizedRecommendations(userId: string): Promi
       {
         id: "default_attendance",
         type: "attendance_improvement",
-        title: "Maintain Perfect Attendance",
-        description: "Keep up your great attendance! Use the mobile app to check in quickly and never miss a class.",
-        priority: "low",
-        actionable: true,
-        estimated_impact: "High - Consistent attendance is key to academic success",
+        title: "Maintain Consistent Attendance",
+        description: "Regular attendance is strongly correlated with academic success. Try to attend all your classes and arrive on time.",
+        priority: "high",
+        actionable: false,
+        estimated_impact: "High impact on learning outcomes",
         category: "Attendance",
       },
       {
         id: "default_organization",
         type: "task_prioritization",
-        title: "Stay Organized",
-        description:
-          "Use the task management system to keep track of assignments and deadlines. Set reminders for important due dates.",
+        title: "Organize Your Study Materials",
+        description: "Keep your notes, assignments, and study materials well-organized. This will save you time and reduce stress when preparing for exams.",
         priority: "medium",
-        actionable: true,
-        estimated_impact: "Medium - Organization reduces stress and improves performance",
+        actionable: false,
+        estimated_impact: "Medium impact on study efficiency",
         category: "Organization",
       },
       {
         id: "default_study",
         type: "study_tip",
-        title: "Establish a Study Routine",
-        description:
-          "Create a consistent study schedule. Even 30 minutes of focused study daily can significantly improve your grades.",
+        title: "Develop a Consistent Study Routine",
+        description: "Establish a regular study schedule with dedicated time slots for each subject. Consistency is key to effective learning.",
         priority: "medium",
-        actionable: true,
-        estimated_impact: "High - Regular study habits improve long-term retention",
+        actionable: false,
+        estimated_impact: "High impact on knowledge retention",
         category: "Study Habits",
       },
-    ]
+    ];
   }
+
   function analyzeBusyDays(schedule: any[]): string[] {
-    // Count number of classes per day
     const dayCounts: Record<string, number> = {};
     for (const entry of schedule) {
-      // Assume each entry has a 'day' field (e.g., "Monday")
       const day = entry.day || (entry.classes && entry.classes.day);
       if (day) {
         dayCounts[day] = (dayCounts[day] || 0) + 1;
       }
     }
-    // Find the days with the most classes (busiest)
+    
     const maxCount = Math.max(0, ...Object.values(dayCounts));
     if (maxCount === 0) return [];
-    // Return all days that have the max count
-      return Object.entries(dayCounts)
-        .filter(([_, count]) => count === maxCount)
-        .map(([day]) => day);
-    }
-  
+    
+    return Object.entries(dayCounts)
+      .filter(([_, count]) => count === maxCount)
+      .map(([day]) => day);
   }
-
+}

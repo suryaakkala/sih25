@@ -1,4 +1,4 @@
-//components/ai-recommendations.tsx
+// components/ai-recommendations.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -87,7 +87,6 @@ export default function AIRecommendations() {
     } catch (error) {
       console.error("Error fetching recommendations:", error)
       setError("Failed to load recommendations. Please try again.")
-      // Fallback to empty array instead of mock data
       setRecommendations([])
     } finally {
       setRefreshing(false)
@@ -346,16 +345,7 @@ function RecommendationItem({
         </div>
       </div>
       
-      {recommendation.actionable && (
-        <div className="flex justify-end mt-3">
-          <Button
-            size="sm"
-            onClick={() => onAction(recommendation.id, "acted_upon")}
-          >
-            Take Action
-          </Button>
-        </div>
-      )}
+      {/* Removed the Take Action button to allow text to occupy complete container space */}
     </Alert>
   )
 }
