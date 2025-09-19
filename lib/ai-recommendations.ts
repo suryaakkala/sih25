@@ -1,3 +1,5 @@
+// lib/ai-recommendations.ts
+
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { groqApi } from "./groq-api" // Import the Groq API client
