@@ -28,6 +28,7 @@ export default function AIRecommendations() {
   }, [])
 
   const fetchRecommendations = async () => {
+    setLoading(true)
     try {
       const response = await fetch("/api/recommendations")
       const data = await response.json()
@@ -64,6 +65,10 @@ export default function AIRecommendations() {
     } catch (error) {
       console.error("Error tracking recommendation interaction:", error)
     }
+  }
+
+  const handleRefresh = () => {
+    fetchRecommendations()
   }
 
   const getRecommendationIcon = (type: string) => {
@@ -157,6 +162,9 @@ export default function AIRecommendations() {
           <Brain className="h-5 w-5 text-blue-600" />
           AI Recommendations
         </CardTitle>
+        <Button size="sm" onClick={handleRefresh} className="ml-auto">
+          Refresh
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

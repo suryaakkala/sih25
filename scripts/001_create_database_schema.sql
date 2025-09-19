@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS public.classes (
   description TEXT,
   teacher_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   department TEXT,
+  semester INTEGER,
+  batch TEXT,
   credits INTEGER DEFAULT 3,
   max_students INTEGER DEFAULT 50,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -92,6 +94,7 @@ CREATE TABLE IF NOT EXISTS public.attendance_records (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(session_id, student_id)
 );
+
 
 -- Create tasks table
 CREATE TABLE IF NOT EXISTS public.tasks (
@@ -196,6 +199,7 @@ CREATE POLICY "Students can view their own attendance" ON public.attendance_reco
 
 CREATE POLICY "Students can insert their own attendance" ON public.attendance_records
   FOR INSERT WITH CHECK (student_id = auth.uid());
+
 
 CREATE POLICY "Teachers can manage attendance for their classes" ON public.attendance_records
   FOR ALL USING (

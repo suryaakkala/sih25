@@ -1,13 +1,15 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { groqApi } from "./groq-api" // Import the Groq API client
+
 
 interface StudentData {
-  id: string
-  attendance_rate: number
-  recent_attendance: any[]
-  tasks: any[]
-  schedule: any[]
-  performance_metrics: any
+  id: string;
+  attendance_rate: number;
+  recent_attendance: any[];
+  tasks: any[];
+  schedule: any[];
+  performance_metrics: any;
 }
 
 interface Recommendation {
@@ -19,89 +21,6 @@ interface Recommendation {
   actionable: boolean
   estimated_impact: string
   category: string
-}
-
-export async function generatePersonalizedRecommendations(userId: string): Promise<Recommendation[]> {
-  const cookieStore = cookies()
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
-    },
-  })
-
-  // Fetch comprehensive student data
-  const studentData = await fetchStudentData(supabase, userId)
-
-  if (!studentData) {
-    return getDefaultRecommendations()
-  }
-
-  const recommendations: Recommendation[] = []
-
-  // Attendance-based recommendations
-  if (studentData.attendance_rate < 80) {
-    recommendations.push({
-      id: "attendance_improvement",
-      type: "attendance_improvement",
-      title: "Improve Your Attendance",
-      description: `Your attendance rate is ${studentData.attendance_rate}%. Try setting reminders 15 minutes before each class and using the location-based check-in feature.`,
-      priority: "high",
-      actionable: true,
-      estimated_impact: "High - Better attendance correlates with 15-20% grade improvement",
-      category: "Attendance",
-    })
-  }
-
-  // Task management recommendations
-  const overdueTasks =
-    studentData.tasks?.filter((task) => new Date(task.due_date) < new Date() && task.status !== "completed").length || 0
-
-  if (overdueTasks > 0) {
-    recommendations.push({
-      id: "task_prioritization",
-      type: "task_prioritization",
-      title: "Tackle Overdue Tasks",
-      description: `You have ${overdueTasks} overdue tasks. Focus on completing these first, starting with the highest priority ones.`,
-      priority: "high",
-      actionable: true,
-      estimated_impact: "Medium - Reduces stress and improves academic performance",
-      category: "Task Management",
-    })
-  }
-
-  // Schedule optimization
-  const busyDays = analyzeBusyDays(studentData.schedule)
-  if (busyDays.length > 0) {
-    recommendations.push({
-      id: "schedule_optimization",
-      type: "schedule_optimization",
-      title: "Optimize Your Busy Days",
-      description: `${busyDays.join(", ")} appear to be your busiest days. Consider preparing materials the night before and using break times for quick reviews.`,
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "Medium - Better time management reduces stress",
-      category: "Schedule",
-    })
-  }
-
-  // Study pattern recommendations
-  const studyRecommendations = generateStudyRecommendations(studentData)
-  recommendations.push(...studyRecommendations)
-
-  // Performance-based recommendations
-  if (studentData.performance_metrics) {
-    const performanceRecs = generatePerformanceRecommendations(studentData.performance_metrics)
-    recommendations.push(...performanceRecs)
-  }
-
-  // Ensure we have at least some recommendations
-  if (recommendations.length === 0) {
-    recommendations.push(...getDefaultRecommendations())
-  }
-
-  return recommendations.slice(0, 6) // Limit to 6 recommendations
 }
 
 async function fetchStudentData(supabase: any, userId: string): Promise<StudentData | null> {
@@ -154,181 +73,154 @@ async function fetchStudentData(supabase: any, userId: string): Promise<StudentD
   }
 }
 
-function analyzeBusyDays(schedule: any[]): string[] {
-  const dayCount: { [key: string]: number } = {}
-
-  schedule.forEach((item) => {
-    const day = item.day_of_week
-    dayCount[day] = (dayCount[day] || 0) + 1
-  })
-
-  return Object.entries(dayCount)
-    .filter(([_, count]) => count >= 4)
-    .map(([day, _]) => day.charAt(0).toUpperCase() + day.slice(1))
-}
-
-function generateStudyRecommendations(studentData: StudentData): Recommendation[] {
-  const recommendations: Recommendation[] = []
-
-  // Time-based study recommendations
-  const currentHour = new Date().getHours()
-  if (currentHour >= 9 && currentHour <= 11) {
-    recommendations.push({
-      id: "morning_study",
-      type: "study_tip",
-      title: "Optimize Morning Study Time",
-      description:
-        "Research shows that 9-11 AM is optimal for analytical thinking. Use this time for your most challenging subjects.",
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "Medium - 10-15% improvement in retention",
-      category: "Study Tips",
-    })
-  }
-
-  // Task completion pattern analysis
-  const completedTasks = studentData.tasks.filter((t) => t.status === "completed").length
-  const totalTasks = studentData.tasks.length
-
-  if (totalTasks > 0 && completedTasks / totalTasks < 0.7) {
-    recommendations.push({
-      id: "task_completion",
-      type: "task_prioritization",
-      title: "Improve Task Completion Rate",
-      description:
-        "Try breaking large tasks into smaller, manageable chunks. Use the Pomodoro Technique: 25 minutes focused work, 5-minute break.",
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "High - Structured approach increases completion by 25%",
-      category: "Productivity",
-    })
-  }
-
-  return recommendations
-}
-
-function generatePerformanceRecommendations(performanceMetrics: any): Recommendation[] {
-  // This would analyze grades, test scores, assignment completion rates, etc.
-  // For now, return some general performance recommendations
-  return [
-    {
-      id: "active_learning",
-      type: "study_tip",
-      title: "Try Active Learning Techniques",
-      description:
-        "Instead of just reading, try explaining concepts out loud, creating mind maps, or teaching someone else.",
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "High - Active learning improves retention by 50%",
-      category: "Study Methods",
-    },
-  ]
-}
-
-function getDefaultRecommendations(): Recommendation[] {
-  return [
-    {
-      id: "default_attendance",
-      type: "attendance_improvement",
-      title: "Maintain Perfect Attendance",
-      description: "Keep up your great attendance! Use the mobile app to check in quickly and never miss a class.",
-      priority: "low",
-      actionable: true,
-      estimated_impact: "High - Consistent attendance is key to academic success",
-      category: "Attendance",
-    },
-    {
-      id: "default_organization",
-      type: "task_prioritization",
-      title: "Stay Organized",
-      description:
-        "Use the task management system to keep track of assignments and deadlines. Set reminders for important due dates.",
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "Medium - Organization reduces stress and improves performance",
-      category: "Organization",
-    },
-    {
-      id: "default_study",
-      type: "study_tip",
-      title: "Establish a Study Routine",
-      description:
-        "Create a consistent study schedule. Even 30 minutes of focused study daily can significantly improve your grades.",
-      priority: "medium",
-      actionable: true,
-      estimated_impact: "High - Regular study habits improve long-term retention",
-      category: "Study Habits",
-    },
-  ]
-}
-
-export async function trackRecommendationInteraction(
-  userId: string,
-  recommendationId: string,
-  action: "viewed" | "dismissed" | "acted_upon",
-) {
-  const cookieStore = cookies()
+export async function generatePersonalizedRecommendations(userId: string): Promise<Recommendation[]> {
+  const cookieStore = await cookies()
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value
-      },
+      }
     },
   })
 
-  await supabase.from("recommendation_interactions").insert({
-    user_id: userId,
-    recommendation_id: recommendationId,
-    action,
-    timestamp: new Date().toISOString(),
-  })
-}
-
-export function generateSmartNotifications(studentData: StudentData): any[] {
-  interface Notification {
-    type: "class_reminder" | "task_deadline";
-    title: string;
-    message: string;
-    priority: "high" | "medium" | "low";
-    action_url: string;
+  // Fetch comprehensive student data
+  const studentData = await fetchStudentData(supabase, userId)
+  if (!studentData) {
+    return getDefaultRecommendations()
+  }
+  try {
+    // Try to use Groq API for advanced AI recommendations
+    console.log("Student data sent to Groq API:", studentData);
+    const groqRecommendations = await groqApi.generateRecommendations({
+      studentData,
+      recommendationType: 'diverse', // Request diverse recommendations
+      count: 10, // Increase the number of recommendations requested
+      includeDetails: true,
+      prompt: {
+        title: 'Generate actionable and diverse study recommendations',
+        description: 'Provide a variety of personalized tips, strategies, and actionable insights to help students improve their academic performance and overall learning experience. Give very minimal response and no markdown formatting. Always genarete randomly from the following categories: study_tip, schedule_optimization, attendance_improvement, task_prioritization. Ensure recommendations are specific, practical, and tailored to individual student needs. Avoid generic advice and focus on actionable steps that can lead to measurable improvements. Consider factors such as attendance patterns, task management, and study habits. If applicable, suggest ways to optimize their schedule based on their busiest days: ' + (studentData.schedule ? analyzeBusyDays(studentData.schedule).join(", ") : "No schedule data available") + '. Provide a mix of high, medium, and low priority recommendations with clear estimated impacts.'
+      }
+    });
+    console.log("Groq API response:", groqRecommendations);
+    // If Groq API returned valid recommendations, use them
+    if (groqRecommendations && groqRecommendations.length > 0) {
+      console.log("Using Groq AI recommendations");
+      return groqRecommendations.map((rec: any) => ({
+        ...rec,
+        type: rec.type as Recommendation["type"],
+        priority: rec.priority as Recommendation["priority"],
+      }));
+    }
+    // Fall back to the existing recommendation system if Groq fails
+    console.log("Falling back to default recommendation system");
+    return generateDefaultRecommendations(studentData);
+  } catch (error) {
+    console.error("Error using Groq API for recommendations:", error);
+    // Fall back to the existing recommendation system
+    return generateDefaultRecommendations(studentData);
   }
 
-  const notifications: Notification[] = [];
+  // Wrapper around the original recommendation generation logic for fallback
+  function generateDefaultRecommendations(studentData: StudentData): Recommendation[] {
+    const recommendations: Recommendation[] = [];
 
-  // Upcoming class notifications
-  const now = new Date()
-  const upcomingClasses = studentData.schedule.filter((item) => {
-    const classTime = new Date(`${now.toDateString()} ${item.start_time}`)
-    const timeDiff = classTime.getTime() - now.getTime()
-    return timeDiff > 0 && timeDiff <= 15 * 60 * 1000 // Next 15 minutes
-  })
+    // Example recommendation: Improve attendance
+    if (studentData.attendance_rate < 75) {
+      recommendations.push({
+        id: "1",
+        type: "attendance_improvement",
+        title: "Improve Attendance",
+        description: "Your attendance rate is below 75%. Consider attending more classes to improve your performance.",
+        priority: "high",
+        actionable: true,
+        estimated_impact: "High - Regular attendance improves understanding and grades.",
+        category: "Attendance",
+      });
+    }
 
-  upcomingClasses.forEach((classItem) => {
-    notifications.push({
-      type: "class_reminder",
-      title: "Class Starting Soon",
-      message: `${classItem.classes.name} starts in 15 minutes at ${classItem.classes.location}`,
-      priority: "high",
-      action_url: "/attendance/check-in",
-    })
-  })
+    // Example recommendation: Task prioritization
+    if (studentData.tasks.length > 0) {
+      recommendations.push({
+        id: "2",
+        type: "task_prioritization",
+        title: "Prioritize Tasks",
+        description: "You have pending tasks. Focus on completing them before the due dates.",
+        priority: "medium",
+        actionable: true,
+        estimated_impact: "Medium - Timely task completion reduces stress.",
+        category: "Tasks",
+      });
+    }
 
-  // Task deadline notifications
-  const urgentTasks = studentData.tasks.filter((task) => {
-    const dueDate = new Date(task.due_date)
-    const timeDiff = dueDate.getTime() - now.getTime()
-    return timeDiff > 0 && timeDiff <= 24 * 60 * 60 * 1000 && task.status !== "completed" // Due within 24 hours
-  })
+    // Example recommendation: Study tips
+    recommendations.push({
+      id: "3",
+      type: "study_tip",
+      title: "Effective Study Techniques",
+      description: "Consider using flashcards and group study sessions to enhance learning.",
+      priority: "low",
+      actionable: false,
+      estimated_impact: "Low - Incremental improvements in study habits.",
+      category: "Study",
+    });
 
-  urgentTasks.forEach((task) => {
-    notifications.push({
-      type: "task_deadline",
-      title: "Assignment Due Soon",
-      message: `"${task.title}" is due tomorrow. Don't forget to complete it!`,
-      priority: "medium",
-      action_url: "/dashboard/student/tasks",
-    })
-  })
+    return recommendations;
+  }
 
-  return notifications
-}
+  function getDefaultRecommendations(): Recommendation[] {
+    return [
+      {
+        id: "default_attendance",
+        type: "attendance_improvement",
+        title: "Maintain Perfect Attendance",
+        description: "Keep up your great attendance! Use the mobile app to check in quickly and never miss a class.",
+        priority: "low",
+        actionable: true,
+        estimated_impact: "High - Consistent attendance is key to academic success",
+        category: "Attendance",
+      },
+      {
+        id: "default_organization",
+        type: "task_prioritization",
+        title: "Stay Organized",
+        description:
+          "Use the task management system to keep track of assignments and deadlines. Set reminders for important due dates.",
+        priority: "medium",
+        actionable: true,
+        estimated_impact: "Medium - Organization reduces stress and improves performance",
+        category: "Organization",
+      },
+      {
+        id: "default_study",
+        type: "study_tip",
+        title: "Establish a Study Routine",
+        description:
+          "Create a consistent study schedule. Even 30 minutes of focused study daily can significantly improve your grades.",
+        priority: "medium",
+        actionable: true,
+        estimated_impact: "High - Regular study habits improve long-term retention",
+        category: "Study Habits",
+      },
+    ]
+  }
+  function analyzeBusyDays(schedule: any[]): string[] {
+    // Count number of classes per day
+    const dayCounts: Record<string, number> = {};
+    for (const entry of schedule) {
+      // Assume each entry has a 'day' field (e.g., "Monday")
+      const day = entry.day || (entry.classes && entry.classes.day);
+      if (day) {
+        dayCounts[day] = (dayCounts[day] || 0) + 1;
+      }
+    }
+    // Find the days with the most classes (busiest)
+    const maxCount = Math.max(0, ...Object.values(dayCounts));
+    if (maxCount === 0) return [];
+    // Return all days that have the max count
+      return Object.entries(dayCounts)
+        .filter(([_, count]) => count === maxCount)
+        .map(([day]) => day);
+    }
+  
+  }
+

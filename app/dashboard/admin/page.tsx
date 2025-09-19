@@ -1,3 +1,6 @@
+// ================================================
+// FILE: app/dashboard/admin/page.tsx
+// ================================================
 import { requireAdmin } from "@/lib/auth"
 import { createClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -510,3 +513,5 @@ export default async function AdminDashboard() {
     </div>
   )
 }
+
+

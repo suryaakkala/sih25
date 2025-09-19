@@ -2,12 +2,12 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
 export async function getAttendanceStats(userId: string, role: string) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
+      async get(name: string) {
+        return (await cookieStore).get(name)?.value
+      }
     },
   })
 
@@ -80,12 +80,12 @@ export async function getAttendanceStats(userId: string, role: string) {
 }
 
 export async function validateAttendanceSession(sessionId: string, classId: string) {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
+      async get(name: string) {
+        return (await cookieStore).get(name)?.value
+      }
     },
   })
 
@@ -126,9 +126,9 @@ export async function recordAttendance(data: {
   const cookieStore = cookies()
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
+      async get(name: string) {
+        return (await cookieStore).get(name)?.value
+      }
     },
   })
 
